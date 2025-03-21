@@ -1,111 +1,118 @@
-#include "model.h"          // Подключение заголовочного файла модели
-#include <QFile>            // Для работы с файлами
-#include <QTextStream>      // Для чтения текстовых данных из файлов
-#include <cmath>            // Для математических функций, таких как abs, sin и cos
+#include "model.h"
+#include <QFile>
+#include <QTextStream>
+#include <cmath>
 
-Model::Model() {}  // Конструктор (пока пустой)
+Model::Model() {}
 
-// Загрузка модели из файла формата OBJ
-bool Model::load(const QString &filePath)
-{
-    QFile file(filePath);  // Открытие файла по указанному пути
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))  // Проверка на успешное открытие
-        return false;  // Если файл не удалось открыть, возвращаем false
+bool Model::load(const QString &filePath) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
 
-    QTextStream in(&file);  // Создание текстового потока для чтения данных из файла
-    while (!in.atEnd()) {  // Пока не достигнут конец файла
-        QString line = in.readLine();  // Чтение строки из файла
-        QStringList parts = line.split(" ", Qt::SkipEmptyParts);  // Разделение строки на части
-        if (parts.isEmpty()) continue;  // Пропуск пустых строк
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        QStringList parts = line.split(" ", Qt::SkipEmptyParts);
+        if (parts.isEmpty()) continue;
 
-        if (parts[0] == "v") {  // Если строка начинается с "v", это вершина
-            float x = parts[1].toFloat();  // Чтение координаты x
-            float y = parts[2].toFloat();  // Чтение координаты y
-            float z = parts[3].toFloat();  // Чтение координаты z
-            vertices.append(QVector3D(x, y, z));  // Добавление вершины в список
-        } else if (parts[0] == "f") {  // Если строка начинается с "f", это грань
-            QVector<int> face;  // Создание вектора для хранения индексов вершин грани
-            for (int i = 1; i < parts.size(); ++i) {  // Проход по всем элементам грани
-                face.append(parts[i].split("/")[0].toInt() - 1);  // Добавление индекса вершины (уменьшаем на 1 для нулевой индексации)
+        if (parts[0] == "v") {
+            float x = parts[1].toFloat() / 1000.0f; // Перевод из мм в м
+            float y = parts[2].toFloat() / 1000.0f;
+            float z = parts[3].toFloat() / 1000.0f;
+            vertices.append(QVector3D(x, y, z));
+        } else if (parts[0] == "f") {
+            QVector<int> face;
+            for (int i = 1; i < parts.size(); ++i) {
+                face.append(parts[i].split("/")[0].toInt() - 1);
             }
-            faces.append(face);  // Добавление грани в список
+            faces.append(face);
         }
     }
 
-    file.close();  // Закрытие файла после завершения чтения
-    return true;   // Возвращаем true, если загрузка прошла успешно
+    file.close();
+    return true;
 }
-// Расчет объема модели
-double Model::calculateVolume() const
-{
-    double volume = 0.0;  // Переменная для хранения объема
-    for (const QVector<int> &face : faces) {  // Проход по всем граням
-        if (face.size() < 3) continue;  // Пропуск, если грань состоит менее чем из 3 вершин
-        const QVector3D &v0 = vertices[face[0]];  // Первая вершина грани
-        const QVector3D &v1 = vertices[face[1]];  // Вторая вершина грани
-        const QVector3D &v2 = vertices[face[2]];  // Третья вершина грани
-        // Вычисление объема по формуле
+
+double Model::calculateVolume() const {
+    double volume = 0.0;
+    for (const QVector<int> &face : faces) {
+        if (face.size() < 3) continue;
+        const QVector3D &v0 = vertices[face[0]];
+        const QVector3D &v1 = vertices[face[1]];
+        const QVector3D &v2 = vertices[face[2]];
         volume += v0.x() * v1.y() * v2.z() + v1.x() * v2.y() * v0.z() + v2.x() * v0.y() * v1.z()
                 - v0.z() * v1.y() * v2.x() - v1.z() * v2.y() * v0.x() - v2.z() * v0.y() * v1.x();
     }
-    return std::abs(volume) / 6.0;  // Возвращаем абсолютное значение объема, деленное на 6
+    return std::abs(volume) / 6.0;
 }
 
-// Расчет площади проекции модели
-double Model::calculateProjectionArea() const
-{
-    double area = 0.0;  // Переменная для хранения площади
-    for (const QVector<int> &face : faces) {  // Проход по всем граням
-        if (face.size() < 3) continue;  // Пропуск, если грань состоит менее чем из 3 вершин
-        const QVector3D &v0 = vertices[face[0]];  // Первая вершина грани
-        const QVector3D &v1 = vertices[face[1]];  // Вторая вершина грани
-        const QVector3D &v2 = vertices[face[2]];  // Третья вершина грани
-        // Вычисление площади треугольника по формуле
+double Model::calculateProjectionArea() const {
+    double area = 0.0;
+    for (const QVector<int> &face : faces) {
+        if (face.size() < 3) continue;
+        const QVector3D &v0 = vertices[face[0]];
+        const QVector3D &v1 = vertices[face[1]];
+        const QVector3D &v2 = vertices[face[2]];
         area += std::abs((v1.x() - v0.x()) * (v2.y() - v0.y()) - (v2.x() - v0.x()) * (v1.y() - v0.y())) / 2.0;
     }
-    return area;  // Возвращаем общую площадь проекции
+    return area;
 }
 
-// Реализация публичных методов для доступа к данным
-const QVector<QVector3D>& Model::getVertices() const
-{
-    return vertices;  // Возвращаем список вершин
-}
-const QVector<QVector<int>>& Model::getFaces() const
-{
-    return faces;  // Возвращаем список граней
+QVector3D Model::getModelDimensions() const {
+    if (vertices.isEmpty()) return QVector3D(0, 0, 0);
+
+    float minX = vertices[0].x(), maxX = vertices[0].x();
+    float minY = vertices[0].y(), maxY = vertices[0].y();
+    float minZ = vertices[0].z(), maxZ = vertices[0].z();
+
+    for (const QVector3D &vertex : vertices) {
+        if (vertex.x() < minX) minX = vertex.x();
+        if (vertex.x() > maxX) maxX = vertex.x();
+        if (vertex.y() < minY) minY = vertex.y();
+        if (vertex.y() > maxY) maxY = vertex.y();
+        if (vertex.z() < minZ) minZ = vertex.z();
+        if (vertex.z() > maxZ) maxZ = vertex.z();
+    }
+
+    return QVector3D(maxX - minX, maxY - minY, maxZ - minZ);
 }
 
-// Методы для вращения модели
-void Model::rotateX(float angle)
-{
-    float rad = qDegreesToRadians(angle);  // Преобразование градусов в радианы
-    for (QVector3D &vertex : vertices) {  // Проход по всем вершинам
-        float y = vertex.y() * cos(rad) - vertex.z() * sin(rad);  // Новая координата y
-        float z = vertex.y() * sin(rad) + vertex.z() * cos(rad);  // Новая координата z
-        vertex.setY(y);  // Установка новой координаты y
-        vertex.setZ(z);  // Установка новой координаты z
+const QVector<QVector3D>& Model::getVertices() const {
+    return vertices;
+}
+
+const QVector<QVector<int>>& Model::getFaces() const {
+    return faces;
+}
+
+void Model::rotateX(float angle) {
+    float rad = qDegreesToRadians(angle);
+    for (QVector3D &vertex : vertices) {
+        float y = vertex.y() * cos(rad) - vertex.z() * sin(rad);
+        float z = vertex.y() * sin(rad) + vertex.z() * cos(rad);
+        vertex.setY(y);
+        vertex.setZ(z);
     }
 }
 
-void Model::rotateY(float angle)
-{
-    float rad = qDegreesToRadians(angle);  // Преобразование градусов в радианы
-    for (QVector3D &vertex : vertices) {  // Проход по всем вершинам
-        float x = vertex.x() * cos(rad) + vertex.z() * sin(rad);  // Новая координата x
-        float z = -vertex.x() * sin(rad) + vertex.z() * cos(rad);  // Новая координата z
-        vertex.setX(x);  // Установка новой координаты x
-        vertex.setZ(z);  // Установка новой координаты z
+void Model::rotateY(float angle) {
+    float rad = qDegreesToRadians(angle);
+    for (QVector3D &vertex : vertices) {
+        float x = vertex.x() * cos(rad) + vertex.z() * sin(rad);
+        float z = -vertex.x() * sin(rad) + vertex.z() * cos(rad);
+        vertex.setX(x);
+        vertex.setZ(z);
     }
 }
 
-void Model::rotateZ(float angle)
-{
-    float rad = qDegreesToRadians(angle);  // Преобразование градусов в радианы
-    for (QVector3D &vertex : vertices) {  // Проход по всем вершинам
-        float x = vertex.x() * cos(rad) - vertex.y() * sin(rad);  // Новая координата x
-        float y = vertex.x() * sin(rad) + vertex.y() * cos(rad);  // Новая координата y
-        vertex.setX(x);  // Установка новой координаты x
-        vertex.setY(y);  // Установка новой координаты y
+void Model::rotateZ(float angle) {
+    float rad = qDegreesToRadians(angle);
+    for (QVector3D &vertex : vertices) {
+        float x = vertex.x() * cos(rad) - vertex.y() * sin(rad);
+        float y = vertex.x() * sin(rad) + vertex.y() * cos(rad);
+        vertex.setX(x);
+        vertex.setY(y);
     }
 }
+

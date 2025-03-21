@@ -1,35 +1,46 @@
-#include "mainwindow.h"          // Подключение заголовочного файла MainWindow
-#include <QMenuBar>              // Для создания меню в главном окне
-#include <QMenu>                 // Для создания пунктов меню
-#include <QAction>               // Для создания действий в меню
-#include <QFileDialog>           // Для выбора файла через диалоговое окно
-#include <QMessageBox>           // Для отображения сообщений об ошибках
+#include "mainwindow.h"
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+#include <QFileDialog>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), modelViewer(new ModelViewer(this))  // Инициализация ModelViewer
+    : QMainWindow(parent), modelViewer(new ModelViewer(this))
 {
-    setWindowTitle("3D Model Viewer");  // Установка заголовка окна
-    setCentralWidget(modelViewer);      // Установка ModelViewer в качестве центрального виджета
+    setWindowTitle("3D Model Viewer");
+    setCentralWidget(modelViewer);
 
-    // Создание меню "File"
-    QMenu *fileMenu = menuBar()->addMenu("File");  // Добавление меню в строку меню
-
-    // Создание действия "Open" в меню "File"
-    QAction *openAction = fileMenu->addAction("Open");  // Добавление действия "Open"
-    connect(openAction, &QAction::triggered, this, &MainWindow::openModel);  // Подключение слота openModel
+    QMenu *fileMenu = menuBar()->addMenu("Файл");
+    QAction *openAction = fileMenu->addAction("Открыть");
+    connect(openAction, &QAction::triggered, this, &MainWindow::openModel);
 }
 
-MainWindow::~MainWindow() {}  // Деструктор (пока пустой)
+MainWindow::~MainWindow() {}
 
-// Слот для открытия модели
 void MainWindow::openModel()
 {
-    // Открытие диалогового окна для выбора файла
-    QString filePath = QFileDialog::getOpenFileName(this, "Open Model", "", "OBJ Files (*.obj)");
+    QString filePath = QFileDialog::getOpenFileName(this, "Открыть модель", "", "OBJ Files (*.obj)");
 
-    if (!filePath.isEmpty()) {  // Если файл выбран
-        modelViewer->loadModel(filePath);  // Загрузка модели в ModelViewer
+    if (!filePath.isEmpty()) {
+        if (modelViewer->loadModel(filePath)) {
+            // Получаем данные о модели через методы ModelViewer
+            QVector3D dimensions = modelViewer->getModelDimensions();
+            double volume = modelViewer->calculateVolume();
+            double area = modelViewer->calculateProjectionArea();
+
+            // Обновляем заголовок окна с информацией о модели
+            QString title = QString("3D Model Viewer | Размеры: %1x%2x%3 м | Объем: %4 м³ | Площадь проекции: %5 м²")
+                            .arg(dimensions.x(), 0, 'f', 2)
+                            .arg(dimensions.y(), 0, 'f', 2)
+                            .arg(dimensions.z(), 0, 'f', 2)
+                            .arg(volume, 0, 'f', 2)
+                            .arg(area, 0, 'f', 2);
+            setWindowTitle(title);
+        } else {
+            QMessageBox::warning(this, "Ошибка", "Не удалось загрузить модель.");
+        }
     } else {
-        QMessageBox::warning(this, "Warning", "No file selected.");  // Сообщение, если файл не выбран
+        QMessageBox::warning(this, "Предупреждение", "Файл не выбран.");
     }
 }

@@ -1,21 +1,25 @@
 #ifndef MODELVIEWER_H
 #define MODELVIEWER_H
 
-#include <QWidget>          // Базовый класс для всех виджетов в Qt
-#include "model.h"          // Подключение заголовочного файла модели
-#include "viewer.h"         // Подключение заголовочного файла Viewer
+#include <QWidget>
+#include "model.h"
+#include "viewer.h"
 
 class ModelViewer : public QWidget
 {
-    Q_OBJECT  // Макрос для поддержки сигналов и слотов
+    Q_OBJECT
 
 public:
-    ModelViewer(QWidget *parent = nullptr);  // Конструктор класса ModelViewer
-    void loadModel(const QString &filePath);  // Метод для загрузки модели из файла
+    ModelViewer(QWidget *parent = nullptr);
+    bool loadModel(const QString &filePath);
+
+    QVector3D getModelDimensions() const;
+    double calculateVolume() const;
+    double calculateProjectionArea() const;
 
 private:
-    Model *model;  // Указатель на объект модели
-    Viewer *viewer;  // Указатель на объект Viewer для отображения модели
+    Model *model;
+    Viewer *viewer;
 };
 
 #endif // MODELVIEWER_H

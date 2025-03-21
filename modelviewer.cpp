@@ -1,22 +1,41 @@
-#include "modelviewer.h"  // Подключение заголовочного файла ModelViewer
-#include <QVBoxLayout>    // Для управления компоновкой виджетов
-#include <QFileDialog>    // Для выбора файла через диалоговое окно
-#include <QMessageBox>    // Для отображения сообщений об ошибках
+#include "modelviewer.h"
+#include <QVBoxLayout>
+#include <QFileDialog>
+#include <QMessageBox>
 
 ModelViewer::ModelViewer(QWidget *parent)
-    : QWidget(parent), model(new Model()), viewer(new Viewer(this))  // Инициализация модели и Viewer
+    : QWidget(parent), model(new Model()), viewer(new Viewer(this))
 {
-    QVBoxLayout *layout = new QVBoxLayout(this);  // Создание вертикальной компоновки
-    layout->addWidget(viewer);  // Добавление Viewer в компоновку
-    setLayout(layout);  // Установка компоновки для текущего виджета
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->addWidget(viewer);
+    setLayout(layout);
 }
 
-// Метод для загрузки модели из файла
-void ModelViewer::loadModel(const QString &filePath)
+bool ModelViewer::loadModel(const QString &filePath)
 {
-    if (model->load(filePath)) {  // Попытка загрузить модель
-        viewer->setModel(model);  // Установка модели в Viewer для отображения
+    if (model->load(filePath)) {
+        viewer->setModel(model);
+        // Автоматическое масштабирование при загрузке модели
+        QVector3D dimensions = model->getModelDimensions();
+        float maxDimension = qMax(dimensions.x(), qMax(dimensions.y(), dimensions.z()));
+        if (maxDimension > 0) {
+            viewer->setScale(1.0f / maxDimension * 200); // Масштабирование для полного отображения
+        }
+        return true;
     } else {
-        QMessageBox::critical(this, "Error", "Failed to load the model.");  // Сообщение об ошибке
+        QMessageBox::critical(this, "Ошибка", "Не удалось загрузить модель.");
+        return false;
     }
+}
+
+QVector3D ModelViewer::getModelDimensions() const {
+    return model->getModelDimensions();
+}
+
+double ModelViewer::calculateVolume() const {
+    return model->calculateVolume();
+}
+
+double ModelViewer::calculateProjectionArea() const {
+    return model->calculateProjectionArea();
 }
