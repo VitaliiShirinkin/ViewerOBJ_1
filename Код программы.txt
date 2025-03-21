@@ -53,389 +53,466 @@ int main(int argc, char *argv[])
     return app.exec();             // Запуск основного цикла приложения
 }
 
+
 2. mainwindow.cpp
-#include "mainwindow.h"          // Подключение заголовочного файла MainWindow
-#include <QMenuBar>              // Для создания меню в главном окне
-#include <QMenu>                 // Для создания пунктов меню
-#include <QAction>               // Для создания действий в меню
-#include <QFileDialog>           // Для выбора файла через диалоговое окно
-#include <QMessageBox>           // Для отображения сообщений об ошибках
+#include "mainwindow.h"
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+#include <QFileDialog>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), modelViewer(new ModelViewer(this))  // Инициализация ModelViewer
+    : QMainWindow(parent), modelViewer(new ModelViewer(this))
 {
-    setWindowTitle("3D Model Viewer");  // Установка заголовка окна
-    setCentralWidget(modelViewer);      // Установка ModelViewer в качестве центрального виджета
+    setWindowTitle("3D Model Viewer");
+    setCentralWidget(modelViewer);
 
-    // Создание меню "File"
-    QMenu *fileMenu = menuBar()->addMenu("File");  // Добавление меню в строку меню
-
-    // Создание действия "Open" в меню "File"
-    QAction *openAction = fileMenu->addAction("Open");  // Добавление действия "Open"
-    connect(openAction, &QAction::triggered, this, &MainWindow::openModel);  // Подключение слота openModel
+    QMenu *fileMenu = menuBar()->addMenu("Файл");
+    QAction *openAction = fileMenu->addAction("Открыть");
+    connect(openAction, &QAction::triggered, this, &MainWindow::openModel);
 }
 
-MainWindow::~MainWindow() {}  // Деструктор (пока пустой)
+MainWindow::~MainWindow() {}
 
-// Слот для открытия модели
 void MainWindow::openModel()
 {
-    // Открытие диалогового окна для выбора файла
-    QString filePath = QFileDialog::getOpenFileName(this, "Open Model", "", "OBJ Files (*.obj)");
+    QString filePath = QFileDialog::getOpenFileName(this, "Открыть модель", "", "OBJ Files (*.obj)");
 
-    if (!filePath.isEmpty()) {  // Если файл выбран
-        modelViewer->loadModel(filePath);  // Загрузка модели в ModelViewer
+    if (!filePath.isEmpty()) {
+        if (modelViewer->loadModel(filePath)) {
+            // Получаем данные о модели через методы ModelViewer
+            QVector3D dimensions = modelViewer->getModelDimensions();
+            double volume = modelViewer->calculateVolume();
+            double area = modelViewer->calculateProjectionArea();
+
+            // Обновляем заголовок окна с информацией о модели
+            QString title = QString("3D Model Viewer | Размеры: %1x%2x%3 м | Объем: %4 м³ | Площадь проекции: %5 м²")
+                            .arg(dimensions.x(), 0, 'f', 2)
+                            .arg(dimensions.y(), 0, 'f', 2)
+                            .arg(dimensions.z(), 0, 'f', 2)
+                            .arg(volume, 0, 'f', 2)
+                            .arg(area, 0, 'f', 2);
+            setWindowTitle(title);
+        } else {
+            QMessageBox::warning(this, "Ошибка", "Не удалось загрузить модель.");
+        }
     } else {
-        QMessageBox::warning(this, "Warning", "No file selected.");  // Сообщение, если файл не выбран
+        QMessageBox::warning(this, "Предупреждение", "Файл не выбран.");
     }
 }
+
 
 2.1 mainwindow.h
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow>      // Базовый класс для главного окна приложения
-#include "modelviewer.h"     // Подключение заголовочного файла ModelViewer
+#include <QMainWindow>
+#include "modelviewer.h"
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT  // Макрос для поддержки сигналов и слотов
+    Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);  // Конструктор класса MainWindow
-    ~MainWindow();  // Деструктор класса MainWindow
+    MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
 private slots:
-    void openModel();  // Слот для открытия модели из файла
+    void openModel();
 
 private:
-    ModelViewer *modelViewer;  // Указатель на объект ModelViewer для отображения модели
+    ModelViewer *modelViewer;
 };
 
 #endif // MAINWINDOW_H
 
 
 3. model.cpp
-#include "model.h"          // Подключение заголовочного файла модели
-#include <QFile>            // Для работы с файлами
-#include <QTextStream>      // Для чтения текстовых данных из файлов
-#include <cmath>            // Для математических функций, таких как abs, sin и cos
+#include "model.h"
+#include <QFile>
+#include <QTextStream>
+#include <cmath>
 
-Model::Model() {}  // Конструктор (пока пустой)
+Model::Model() {}
 
-// Загрузка модели из файла формата OBJ
-bool Model::load(const QString &filePath)
-{
-    QFile file(filePath);  // Открытие файла по указанному пути
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))  // Проверка на успешное открытие
-        return false;  // Если файл не удалось открыть, возвращаем false
+bool Model::load(const QString &filePath) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
 
-    QTextStream in(&file);  // Создание текстового потока для чтения данных из файла
-    while (!in.atEnd()) {  // Пока не достигнут конец файла
-        QString line = in.readLine();  // Чтение строки из файла
-        QStringList parts = line.split(" ", Qt::SkipEmptyParts);  // Разделение строки на части
-        if (parts.isEmpty()) continue;  // Пропуск пустых строк
+    QTextStream in(&file);
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        QStringList parts = line.split(" ", Qt::SkipEmptyParts);
+        if (parts.isEmpty()) continue;
 
-        if (parts[0] == "v") {  // Если строка начинается с "v", это вершина
-            float x = parts[1].toFloat();  // Чтение координаты x
-            float y = parts[2].toFloat();  // Чтение координаты y
-            float z = parts[3].toFloat();  // Чтение координаты z
-            vertices.append(QVector3D(x, y, z));  // Добавление вершины в список
-        } else if (parts[0] == "f") {  // Если строка начинается с "f", это грань
-            QVector<int> face;  // Создание вектора для хранения индексов вершин грани
-            for (int i = 1; i < parts.size(); ++i) {  // Проход по всем элементам грани
-                face.append(parts[i].split("/")[0].toInt() - 1);  // Добавление индекса вершины (уменьшаем на 1 для нулевой индексации)
+        if (parts[0] == "v") {
+            float x = parts[1].toFloat() / 1000.0f; // Перевод из мм в м
+            float y = parts[2].toFloat() / 1000.0f;
+            float z = parts[3].toFloat() / 1000.0f;
+            vertices.append(QVector3D(x, y, z));
+        } else if (parts[0] == "f") {
+            QVector<int> face;
+            for (int i = 1; i < parts.size(); ++i) {
+                face.append(parts[i].split("/")[0].toInt() - 1);
             }
-            faces.append(face);  // Добавление грани в список
+            faces.append(face);
         }
     }
 
-    file.close();  // Закрытие файла после завершения чтения
-    return true;   // Возвращаем true, если загрузка прошла успешно
+    file.close();
+    return true;
 }
-// Расчет объема модели
-double Model::calculateVolume() const
-{
-    double volume = 0.0;  // Переменная для хранения объема
-    for (const QVector<int> &face : faces) {  // Проход по всем граням
-        if (face.size() < 3) continue;  // Пропуск, если грань состоит менее чем из 3 вершин
-        const QVector3D &v0 = vertices[face[0]];  // Первая вершина грани
-        const QVector3D &v1 = vertices[face[1]];  // Вторая вершина грани
-        const QVector3D &v2 = vertices[face[2]];  // Третья вершина грани
-        // Вычисление объема по формуле
+
+double Model::calculateVolume() const {
+    double volume = 0.0;
+    for (const QVector<int> &face : faces) {
+        if (face.size() < 3) continue;
+        const QVector3D &v0 = vertices[face[0]];
+        const QVector3D &v1 = vertices[face[1]];
+        const QVector3D &v2 = vertices[face[2]];
         volume += v0.x() * v1.y() * v2.z() + v1.x() * v2.y() * v0.z() + v2.x() * v0.y() * v1.z()
                 - v0.z() * v1.y() * v2.x() - v1.z() * v2.y() * v0.x() - v2.z() * v0.y() * v1.x();
     }
-    return std::abs(volume) / 6.0;  // Возвращаем абсолютное значение объема, деленное на 6
+    return std::abs(volume) / 6.0;
 }
 
-// Расчет площади проекции модели
-double Model::calculateProjectionArea() const
-{
-    double area = 0.0;  // Переменная для хранения площади
-    for (const QVector<int> &face : faces) {  // Проход по всем граням
-        if (face.size() < 3) continue;  // Пропуск, если грань состоит менее чем из 3 вершин
-        const QVector3D &v0 = vertices[face[0]];  // Первая вершина грани
-        const QVector3D &v1 = vertices[face[1]];  // Вторая вершина грани
-        const QVector3D &v2 = vertices[face[2]];  // Третья вершина грани
-        // Вычисление площади треугольника по формуле
+double Model::calculateProjectionArea() const {
+    double area = 0.0;
+    for (const QVector<int> &face : faces) {
+        if (face.size() < 3) continue;
+        const QVector3D &v0 = vertices[face[0]];
+        const QVector3D &v1 = vertices[face[1]];
+        const QVector3D &v2 = vertices[face[2]];
         area += std::abs((v1.x() - v0.x()) * (v2.y() - v0.y()) - (v2.x() - v0.x()) * (v1.y() - v0.y())) / 2.0;
     }
-    return area;  // Возвращаем общую площадь проекции
+    return area;
 }
 
-// Реализация публичных методов для доступа к данным
-const QVector<QVector3D>& Model::getVertices() const
-{
-    return vertices;  // Возвращаем список вершин
-}
-const QVector<QVector<int>>& Model::getFaces() const
-{
-    return faces;  // Возвращаем список граней
+QVector3D Model::getModelDimensions() const {
+    if (vertices.isEmpty()) return QVector3D(0, 0, 0);
+
+    float minX = vertices[0].x(), maxX = vertices[0].x();
+    float minY = vertices[0].y(), maxY = vertices[0].y();
+    float minZ = vertices[0].z(), maxZ = vertices[0].z();
+
+    for (const QVector3D &vertex : vertices) {
+        if (vertex.x() < minX) minX = vertex.x();
+        if (vertex.x() > maxX) maxX = vertex.x();
+        if (vertex.y() < minY) minY = vertex.y();
+        if (vertex.y() > maxY) maxY = vertex.y();
+        if (vertex.z() < minZ) minZ = vertex.z();
+        if (vertex.z() > maxZ) maxZ = vertex.z();
+    }
+
+    return QVector3D(maxX - minX, maxY - minY, maxZ - minZ);
 }
 
-// Методы для вращения модели
-void Model::rotateX(float angle)
-{
-    float rad = qDegreesToRadians(angle);  // Преобразование градусов в радианы
-    for (QVector3D &vertex : vertices) {  // Проход по всем вершинам
-        float y = vertex.y() * cos(rad) - vertex.z() * sin(rad);  // Новая координата y
-        float z = vertex.y() * sin(rad) + vertex.z() * cos(rad);  // Новая координата z
-        vertex.setY(y);  // Установка новой координаты y
-        vertex.setZ(z);  // Установка новой координаты z
+const QVector<QVector3D>& Model::getVertices() const {
+    return vertices;
+}
+
+const QVector<QVector<int>>& Model::getFaces() const {
+    return faces;
+}
+
+void Model::rotateX(float angle) {
+    float rad = qDegreesToRadians(angle);
+    for (QVector3D &vertex : vertices) {
+        float y = vertex.y() * cos(rad) - vertex.z() * sin(rad);
+        float z = vertex.y() * sin(rad) + vertex.z() * cos(rad);
+        vertex.setY(y);
+        vertex.setZ(z);
     }
 }
 
-void Model::rotateY(float angle)
-{
-    float rad = qDegreesToRadians(angle);  // Преобразование градусов в радианы
-    for (QVector3D &vertex : vertices) {  // Проход по всем вершинам
-        float x = vertex.x() * cos(rad) + vertex.z() * sin(rad);  // Новая координата x
-        float z = -vertex.x() * sin(rad) + vertex.z() * cos(rad);  // Новая координата z
-        vertex.setX(x);  // Установка новой координаты x
-        vertex.setZ(z);  // Установка новой координаты z
+void Model::rotateY(float angle) {
+    float rad = qDegreesToRadians(angle);
+    for (QVector3D &vertex : vertices) {
+        float x = vertex.x() * cos(rad) + vertex.z() * sin(rad);
+        float z = -vertex.x() * sin(rad) + vertex.z() * cos(rad);
+        vertex.setX(x);
+        vertex.setZ(z);
     }
 }
 
-void Model::rotateZ(float angle)
-{
-    float rad = qDegreesToRadians(angle);  // Преобразование градусов в радианы
-    for (QVector3D &vertex : vertices) {  // Проход по всем вершинам
-        float x = vertex.x() * cos(rad) - vertex.y() * sin(rad);  // Новая координата x
-        float y = vertex.x() * sin(rad) + vertex.y() * cos(rad);  // Новая координата y
-        vertex.setX(x);  // Установка новой координаты x
-        vertex.setY(y);  // Установка новой координаты y
+void Model::rotateZ(float angle) {
+    float rad = qDegreesToRadians(angle);
+    for (QVector3D &vertex : vertices) {
+        float x = vertex.x() * cos(rad) - vertex.y() * sin(rad);
+        float y = vertex.x() * sin(rad) + vertex.y() * cos(rad);
+        vertex.setX(x);
+        vertex.setY(y);
     }
 }
+
+
 
 3.1 model.h
 #ifndef MODEL_H
 #define MODEL_H
 
-#include <QVector>      // Для использования QVector
-#include <QVector3D>    // Для работы с 3D векторами
+#include <QVector>
+#include <QVector3D>
 
 class Model
 {
 public:
-    Model();  // Конструктор
-    bool load(const QString &filePath);  // Загрузка модели из файла
-    double calculateVolume() const;      // Расчет объема модели
-    double calculateProjectionArea() const;  // Расчет площади проекции модели
+    Model();
+    bool load(const QString &filePath);
+    double calculateVolume() const;
+    double calculateProjectionArea() const;
+    QVector3D getModelDimensions() const; // Новый метод для получения размеров модели
 
-    // Публичные методы для доступа к данным
     const QVector<QVector3D>& getVertices() const;
     const QVector<QVector<int>>& getFaces() const;
 
-    // Методы для вращения модели
     void rotateX(float angle);
     void rotateY(float angle);
     void rotateZ(float angle);
 
 private:
-    QVector<QVector3D> vertices;  // Список вершин модели
-    QVector<QVector<int>> faces;  // Список граней модели (индексы вершин)
+    QVector<QVector3D> vertices;
+    QVector<QVector<int>> faces;
 };
 
 #endif // MODEL_H
 
 
+
 4. modelviewer.cpp
-#include "modelviewer.h"  // Подключение заголовочного файла ModelViewer
-#include <QVBoxLayout>    // Для управления компоновкой виджетов
-#include <QFileDialog>    // Для выбора файла через диалоговое окно
-#include <QMessageBox>    // Для отображения сообщений об ошибках
+#include "modelviewer.h"
+#include <QVBoxLayout>
+#include <QFileDialog>
+#include <QMessageBox>
 
 ModelViewer::ModelViewer(QWidget *parent)
-    : QWidget(parent), model(new Model()), viewer(new Viewer(this))  // Инициализация модели и Viewer
+    : QWidget(parent), model(new Model()), viewer(new Viewer(this))
 {
-    QVBoxLayout *layout = new QVBoxLayout(this);  // Создание вертикальной компоновки
-    layout->addWidget(viewer);  // Добавление Viewer в компоновку
-    setLayout(layout);  // Установка компоновки для текущего виджета
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->addWidget(viewer);
+    setLayout(layout);
 }
 
-// Метод для загрузки модели из файла
-void ModelViewer::loadModel(const QString &filePath)
+bool ModelViewer::loadModel(const QString &filePath)
 {
-    if (model->load(filePath)) {  // Попытка загрузить модель
-        viewer->setModel(model);  // Установка модели в Viewer для отображения
+    if (model->load(filePath)) {
+        viewer->setModel(model);
+        // Автоматическое масштабирование при загрузке модели
+        QVector3D dimensions = model->getModelDimensions();
+        float maxDimension = qMax(dimensions.x(), qMax(dimensions.y(), dimensions.z()));
+        if (maxDimension > 0) {
+            viewer->setScale(1.0f / maxDimension * 200); // Масштабирование для полного отображения
+        }
+        return true;
     } else {
-        QMessageBox::critical(this, "Error", "Failed to load the model.");  // Сообщение об ошибке
+        QMessageBox::critical(this, "Ошибка", "Не удалось загрузить модель.");
+        return false;
     }
 }
+
+QVector3D ModelViewer::getModelDimensions() const {
+    return model->getModelDimensions();
+}
+
+double ModelViewer::calculateVolume() const {
+    return model->calculateVolume();
+}
+
+double ModelViewer::calculateProjectionArea() const {
+    return model->calculateProjectionArea();
+}
+
 
 4.1 modelviewer.h
 #ifndef MODELVIEWER_H
 #define MODELVIEWER_H
 
-#include <QWidget>          // Базовый класс для всех виджетов в Qt
-#include "model.h"          // Подключение заголовочного файла модели
-#include "viewer.h"         // Подключение заголовочного файла Viewer
+#include <QWidget>
+#include "model.h"
+#include "viewer.h"
 
 class ModelViewer : public QWidget
 {
-    Q_OBJECT  // Макрос для поддержки сигналов и слотов
+    Q_OBJECT
 
 public:
-    ModelViewer(QWidget *parent = nullptr);  // Конструктор класса ModelViewer
-    void loadModel(const QString &filePath);  // Метод для загрузки модели из файла
+    ModelViewer(QWidget *parent = nullptr);
+    bool loadModel(const QString &filePath);
+
+    QVector3D getModelDimensions() const;
+    double calculateVolume() const;
+    double calculateProjectionArea() const;
 
 private:
-    Model *model;  // Указатель на объект модели
-    Viewer *viewer;  // Указатель на объект Viewer для отображения модели
+    Model *model;
+    Viewer *viewer;
 };
 
 #endif // MODELVIEWER_H
 
 
-5. viewer.cpp
-#include "viewer.h"          // Подключение заголовочного файла Viewer
-#include <QPainter>          // Для работы с графикой
-#include <QPen>              // Для настройки пера (цвета и стиля линий)
-#include <QMouseEvent>       // Для обработки событий мыши
-#include <QWheelEvent>       // Для обработки событий прокрутки колеса мыши
 
-Viewer::Viewer(QWidget *parent) 
-    : QWidget(parent), model(nullptr), rotationX(0), rotationY(0)  // Инициализация базового класса и указателей
+5. viewer.cpp
+#include "viewer.h"
+#include <QPainter>
+#include <QPen>
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include <QFontMetrics>
+
+Viewer::Viewer(QWidget *parent)
+    : QWidget(parent), model(nullptr), rotationX(0), rotationY(0), scale(1.0)
 {
-    setMinimumSize(400, 400);  // Установка минимального размера виджета
+    setMinimumSize(400, 400);
 }
 
-// Метод для установки модели, которую нужно отобразить
 void Viewer::setModel(Model *model)
 {
-    this->model = model;  // Сохранение указателя на модель
-    update();             // Запрос перерисовки виджета
+    this->model = model;
+    update();
 }
 
-// Метод для обработки события отрисовки
+void Viewer::setScale(float scale)
+{
+    this->scale = scale;
+    update();
+}
+
 void Viewer::paintEvent(QPaintEvent *event)
 {
-    Q_UNUSED(event);  // Убираем предупреждение о неиспользуемом параметре
+    Q_UNUSED(event);
 
-    QPainter painter(this);  // Создание объекта рисовальщика
-    painter.setRenderHint(QPainter::Antialiasing);  // Включение сглаживания для более качественной отрисовки
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
 
-    // Проверка, установлена ли модель
     if (!model) {
-        painter.drawText(rect(), Qt::AlignCenter, "No Model Loaded");  // Если модель не загружена, выводим сообщение
-        return;  // Завершаем выполнение метода
+        painter.drawText(rect(), Qt::AlignCenter, "Модель не загружена");
+        return;
     }
 
-    // Получение данных о вершинах и гранях модели через публичные методы
-    const QVector<QVector3D> &vertices = model->getVertices();  // Получение списка вершин
-    const QVector<QVector<int>> &faces = model->getFaces();     // Получение списка граней
+    // Отрисовка модели
+    const QVector<QVector3D> &vertices = model->getVertices();
+    const QVector<QVector<int>> &faces = model->getFaces();
 
-    // Отрисовка вершин модели
-    painter.setPen(QPen(Qt::black, 2));  // Настройка пера для рисования (черный цвет, толщина 2)
+    painter.setPen(QPen(Qt::black, 2));
     for (const QVector3D &vertex : vertices) {
-        // Преобразование 3D координат в 2D для отображения с учетом вращения
         float x = vertex.x() * cos(rotationY) - vertex.z() * sin(rotationY);
         float z = vertex.x() * sin(rotationY) + vertex.z() * cos(rotationY);
         float y = vertex.y() * cos(rotationX) - z * sin(rotationX);
         z = vertex.y() * sin(rotationX) + z * cos(rotationX);
 
-        // Центрируем модель
-        QPointF point(x + width() / 2, height() / 2 - y);
-        painter.drawEllipse(point, 3, 3);  // Отрисовка вершины как круга
+        QPointF point((x * scale) + width() / 2, height() / 2 - (y * scale));
+        painter.drawEllipse(point, 3, 3);
     }
 
-    // Отрисовка граней модели
-    painter.setPen(QPen(Qt::blue, 2));  // Настройка пера для рисования (синий цвет, толщина 2)
+    painter.setPen(QPen(Qt::blue, 2));
     for (const QVector<int> &face : faces) {
-        if (face.size() < 3) continue;  // Пропускаем грани с менее чем 3 вершинами
-        QPolygonF polygon;  // Создание многоугольника для грани
+        if (face.size() < 3) continue;
+        QPolygonF polygon;
         for (int index : face) {
-            const QVector3D &vertex = vertices[index];  // Получение вершины по индексу
-            // Преобразование 3D координат в 2D для отображения с учетом вращения
+            const QVector3D &vertex = vertices[index];
             float x = vertex.x() * cos(rotationY) - vertex.z() * sin(rotationY);
             float z = vertex.x() * sin(rotationY) + vertex.z() * cos(rotationY);
             float y = vertex.y() * cos(rotationX) - z * sin(rotationX);
             z = vertex.y() * sin(rotationX) + z * cos(rotationX);
 
-            // Центрируем модель
-            QPointF point(x + width() / 2, height() / 2 - y);
-            polygon << point;  // Добавление точки в многоугольник
+            QPointF point((x * scale) + width() / 2, height() / 2 - (y * scale));
+            polygon << point;
         }
-        painter.drawPolygon(polygon);  // Отрисовка грани
-
+        painter.drawPolygon(polygon);
     }
-}
 
-// Обработка нажатий мыши для начала вращения модели
-void Viewer::mousePressEvent(QMouseEvent *event)
-{
-    lastMousePosition = event->pos();  // Сохранение позиции мыши
-}
+    // Вывод информации о модели в столбик
+    QVector3D dimensions = model->getModelDimensions();
+    double volume = model->calculateVolume();
+    double area = model->calculateProjectionArea();
 
-// Обработка движения мыши для вращения модели
-void Viewer::mouseMoveEvent(QMouseEvent *event)
-{
-    if (event->buttons() & Qt::LeftButton) {  // Если нажата левая кнопка мыши
-        // Вычисление изменения углов вращения
-        rotationX += (event->y() - lastMousePosition.y()) * 0.5;  // Изменение угла вращения по оси X
-        rotationY += (event->x() - lastMousePosition.x()) * 0.5;  // Изменение угла вращения по оси Y
-        lastMousePosition = event->pos();  // Обновление последней позиции мыши
-        update();  // Запрос перерисовки виджета
-    }
-}
+    // Форматирование текста
+    QStringList infoLines;
+    infoLines << "Размеры модели:";
+    infoLines << QString("X: %1 м").arg(dimensions.x(), 0, 'f', 2);
+    infoLines << QString("Y: %1 м").arg(dimensions.y(), 0, 'f', 2);
+    infoLines << QString("Z: %1 м").arg(dimensions.z(), 0, 'f', 2);
+    infoLines << ""; // Пустая строка для разделения
+    infoLines << QString("Объем: %1 м³").arg(volume, 0, 'f', 2);
+    infoLines << ""; // Пустая строка для разделения
+    infoLines << QString("Площадь проекции: %1 м²").arg(area, 0, 'f', 2);
 
-// Обработка прокрутки колеса мыши (можно использовать для изменения масштаба)
-void Viewer::wheelEvent(QWheelEvent *event)
-{
-    // Можно реализовать изменение масштаба модели, если это необходимо
-    // Например, можно изменить значения rotationX и rotationY для создания эффекта приближения
-}
+    // Установка шрифта и цвета
+    painter.setPen(Qt::black);
+    painter.setFont(QFont("Arial", 10));
+
+    // Вывод текста в столбик
+    int lineHeight = painter.fontMetrics().height();
+    int yOffset = 20; // Начальная позиция по вертикали
+    for (const QString &line : infoLines) {
+        painter.drawText(10, yOffset,
+                         line); // Вывод каждой строки
+                                yOffset += lineHeight; // Смещение вниз на высоту строки
+                            }
+                        }
+
+                        void Viewer::mousePressEvent(QMouseEvent *event)
+                        {
+                            lastMousePosition = event->pos();
+                        }
+
+                        void Viewer::mouseMoveEvent(QMouseEvent *event)
+                        {
+                            if (event->buttons() & Qt::LeftButton) {
+                                rotationX += (event->y() - lastMousePosition.y()) * 0.5;
+                                rotationY += (event->x() - lastMousePosition.x()) * 0.5;
+                                lastMousePosition = event->pos();
+                                update();
+                            }
+                        }
+
+                        void Viewer::wheelEvent(QWheelEvent *event)
+                        {
+                            // Масштабирование модели
+                            if (event->angleDelta().y() > 0) {
+                                scale *= 1.1; // Увеличение масштаба
+                            } else {
+                                scale /= 1.1; // Уменьшение масштаба
+                            }
+                            update();
+                        }
 
 5.1 viewer.h
 #ifndef VIEWER_H
 #define VIEWER_H
 
-#include <QWidget>          // Базовый класс для всех виджетов в Qt
-#include "model.h"          // Подключение заголовочного файла модели
+#include <QWidget>
+#include "model.h"
 
 class Viewer : public QWidget
 {
-    Q_OBJECT  // Макрос для поддержки сигналов и слотов
+    Q_OBJECT
 
 public:
-    Viewer(QWidget *parent = nullptr);  // Конструктор класса Viewer
-    void setModel(Model *model);         // Метод для установки модели
-    void paintEvent(QPaintEvent *event) override;  // Переопределение метода отрисовки
+    Viewer(QWidget *parent = nullptr);
+    void setModel(Model *model);
+    void setScale(float scale); // Новый метод для установки масштаба
+
+    void paintEvent(QPaintEvent *event) override;
 
 protected:
-    void mousePressEvent(QMouseEvent *event) override;  // Обработка нажатий мыши
-    void mouseMoveEvent(QMouseEvent *event) override;   // Обработка движения мыши
-    void wheelEvent(QWheelEvent *event) override;       // Обработка прокрутки колеса мыши
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private:
-    Model *model;  // Указатель на объект модели
-    QPoint lastMousePosition;  // Последняя позиция мыши для вращения модели
-    float rotationX;  // Угол вращения вокруг оси X
-    float rotationY;  // Угол вращения вокруг оси Y
+    Model *model;
+    QPoint lastMousePosition;
+    float rotationX;
+    float rotationY;
+    float scale; // Переменная для хранения масштаба
 };
 
 #endif // VIEWER_H
+
 
 Структура программы:
 My3DModelViewer/
@@ -450,4 +527,4 @@ My3DModelViewer/
 ├── mainwindow.h
 └── mainwindow.cpp
 
-Доработай программу: 1. сделай вывод размеров модели, расчета объема и площади проекции модели в окно просмотра. Единицы измерения объема м3, площади проекции - м2, размеры модели в м. 2. Дополни возможностью в окне просмотра вертеть, масштабировать бодели с большим количеством вершин и граней. Выведи измененный код для каждого файла программы отдельно.
+Доработай программу: 1. Убери результаты расчета из окна программы слева. Оставь только в верхней части рамки, возле названия проекта 2. Добавь отображение названия модели obj, которая открыта в данный момент. 3. При повторном открытии другой модели obj в окне просмотра некорректно отображается модель. Остаются следы предыдущей открытой модели. Нужно это исправить. 4. Сделай возможность выделять текст на экране курсором и копирования в буфер обмена. Добавь возможность сохранения текста в блокнот. Отобрази измененные файлы программы, каждый файл отдельным сообщением. 
