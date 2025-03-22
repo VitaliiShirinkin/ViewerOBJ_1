@@ -36,13 +36,34 @@ void Viewer::paintEvent(QPaintEvent *event) {
     // Очищаем экран белым цветом
     painter.fillRect(rect(), Qt::white);
 
+    // Отрисовка осей координат
+    int margin = 20; // Отступ от краев экрана
+    int axisLength = qMax(width(), height()); // Длина осей равна максимальному размеру окна
+
+    // Ось X (красная)
+    painter.setPen(QPen(Qt::red, 2));
+    painter.drawLine(margin, height() - margin, width() - margin, height() - margin); // Ось X
+    painter.drawText(width() - margin - 10, height() - margin + 15, "X");
+
+    // Ось Y (зеленая)
+    painter.setPen(QPen(Qt::green, 2));
+    painter.drawLine(margin, height() - margin, margin, margin); // Ось Y
+    painter.drawText(margin - 10, margin + 15, "Y");
+
+    // Ось Z (синяя)
+    painter.setPen(QPen(Qt::blue, 2));
+    painter.drawLine(margin, height() - margin, margin + axisLength / 2, height() - margin - axisLength / 2); // Ось Z
+    painter.drawText(margin + axisLength / 2 + 10, height() - margin - axisLength / 2 - 10, "Z");
+
     // Получаем вершины и грани модели
     const QVector<QVector3D> &vertices = model->getVertices();
     const QVector<QVector<int>> &faces = model->getFaces();
 
     // Отрисовываем вершины
     painter.setPen(QPen(Qt::black, 2));
-    for (const QVector3D &vertex : vertices) {
+    for (int i = 0; i < vertices.size(); ++i) {
+        const QVector3D &vertex = vertices[i];
+
         // Применяем поворот и масштабирование
         float x = vertex.x() * cos(rotationY) - vertex.z() * sin(rotationY);
         float z = vertex.x() * sin(rotationY) + vertex.z() * cos(rotationY);
@@ -51,7 +72,16 @@ void Viewer::paintEvent(QPaintEvent *event) {
 
         // Преобразуем координаты в экранные
         QPointF point((x * scale) + width() / 2, height() / 2 - (y * scale));
-        painter.drawEllipse(point, 3, 3); // Рисуем вершину
+
+        // Отрисовываем вершину
+        if (i == selectedVertexIndex) {
+            // Выделяем выбранную вершину красным цветом
+            painter.setPen(QPen(Qt::red, 4));
+            painter.drawEllipse(point, 5, 5);
+            painter.setPen(QPen(Qt::black, 2));
+        } else {
+            painter.drawEllipse(point, 3, 3);
+        }
     }
 
     // Отрисовываем грани
@@ -73,14 +103,58 @@ void Viewer::paintEvent(QPaintEvent *event) {
         }
         painter.drawPolygon(polygon); // Рисуем грань
     }
+
+    // Отображаем координаты и индекс выбранной вершины
+    if (selectedVertexIndex != -1) {
+        const QVector3D &vertex = vertices[selectedVertexIndex];
+        QString info = QString("Вершина [%1]: (%2, %3, %4)")
+                          .arg(selectedVertexIndex) // Индекс вершины
+                          .arg(vertex.x(), 0, 'f', 2) // Координата X
+                          .arg(vertex.y(), 0, 'f', 2) // Координата Y
+                          .arg(vertex.z(), 0, 'f', 2); // Координата Z
+        painter.setPen(QPen(Qt::black, 2));
+        painter.drawText(10, 20, info); // Отображаем информацию в верхнем левом углу
+    }
 }
 
 void Viewer::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
         lastMousePosition = event->pos(); // Запоминаем позицию мыши
+
+        if (model) {
+            const QVector<QVector3D> &vertices = model->getVertices();
+            int closestVertexIndex = -1;
+            float minDistance = 10.0f; // Максимальное расстояние для выбора вершины
+
+            // Ищем ближайшую вершину к месту клика
+            for (int i = 0; i < vertices.size(); ++i) {
+                const QVector3D &vertex = vertices[i];
+
+                // Применяем поворот и масштабирование
+                float x = vertex.x() * cos(rotationY) - vertex.z() * sin(rotationY);
+                float z = vertex.x() * sin(rotationY) + vertex.z() * cos(rotationY);
+                float y = vertex.y() * cos(rotationX) - z * sin(rotationX);
+                z = vertex.y() * sin(rotationX) + z * cos(rotationX);
+
+                // Преобразуем координаты в экранные
+                QPointF point((x * scale) + width() / 2, height() / 2 - (y * scale));
+
+                // Вычисляем расстояние от курсора мыши до вершины
+                float distance = QLineF(event->pos(), point).length();
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestVertexIndex = i;
+                }
+            }
+
+            // Если найдена ближайшая вершина, выбираем её
+            if (closestVertexIndex != -1) {
+                selectedVertexIndex = closestVertexIndex;
+                update(); // Обновляем отображение
+            }
+        }
     }
 }
-
 void Viewer::mouseMoveEvent(QMouseEvent *event) {
     if (event->buttons() & Qt::LeftButton) {
         // Вычисляем изменение углов поворота
@@ -100,4 +174,3 @@ void Viewer::wheelEvent(QWheelEvent *event) {
     }
     update(); // Обновляем отображение
 }
-

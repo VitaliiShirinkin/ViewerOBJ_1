@@ -25,6 +25,7 @@ private:
     float rotationX; // Угол поворота по оси X
     float rotationY; // Угол поворота по оси Y
     float scale; // Масштаб модели
+    int selectedVertexIndex; // Индекс выбранной вершины
 };
 
 #endif // VIEWER_H
