@@ -2,8 +2,6 @@
 #define VIEWER_H
 
 #include <QWidget>
-#include <QTimer>
-#include <QSlider> // Добавлен для регулировки скорости вращения
 #include "model.h"
 
 class Viewer : public QWidget
@@ -21,21 +19,12 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
-private slots:
-    void updateRotation(); // Слот для обновления углов поворота
-    void setRotationSpeed(int speed); // Слот для установки скорости вращения
-
 private:
-    Model *model;
-    QPoint lastMousePosition;
-    float rotationX;
-    float rotationY;
-    float scale;
-    QTimer *rotationTimer; // Таймер для плавного вращения
-    float targetRotationX; // Целевой угол поворота по X
-    float targetRotationY; // Целевой угол поворота по Y
-    int rotationSpeed; // Скорость вращения
-    QSlider *speedSlider; // Ползунок для регулировки скорости
+    Model *model; // Указатель на модель
+    QPoint lastMousePosition; // Последняя позиция мыши
+    float rotationX; // Угол поворота по оси X
+    float rotationY; // Угол поворота по оси Y
+    float scale; // Масштаб модели
 };
 
 #endif // VIEWER_H

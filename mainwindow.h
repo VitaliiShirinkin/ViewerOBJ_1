@@ -1,29 +1,24 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QMainWindow> // Основной класс для создания главного окна
-#include "modelviewer.h" // Подключение класса ModelViewer для работы с 3D-моделью
+#include <QMainWindow>
+#include "modelviewer.h"
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT // Макрос для поддержки сигналов и слотов
+    Q_OBJECT
 
 public:
-    // Конструктор главного окна
     MainWindow(QWidget *parent = nullptr);
-
-    // Деструктор
     ~MainWindow();
 
 private slots:
-    // Слот для открытия модели
     void openModel();
-
-    // Слот для сохранения текста (заголовка окна) в файл
     void saveText();
+    void rotateModel(); // Слот для поворота модели
+    void translateModel(); // Слот для перемещения модели
 
 private:
-    // Указатель на виджет для отображения и работы с 3D-моделью
     ModelViewer *modelViewer;
 };
 

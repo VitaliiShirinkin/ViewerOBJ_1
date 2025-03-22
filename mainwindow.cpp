@@ -4,10 +4,11 @@
 #include <QAction>
 #include <QFileDialog>
 #include <QMessageBox>
-#include <QClipboard>
-#include <QTextEdit>
-#include <QFile>
-#include <QTextStream>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QPushButton>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), modelViewer(new ModelViewer(this))
@@ -20,6 +21,12 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *saveTextAction = fileMenu->addAction("Сохранить текст");
     connect(openAction, &QAction::triggered, this, &MainWindow::openModel);
     connect(saveTextAction, &QAction::triggered, this, &MainWindow::saveText);
+
+    QMenu *transformMenu = menuBar()->addMenu("Трансформации");
+    QAction *rotateAction = transformMenu->addAction("Повернуть модель");
+    QAction *translateAction = transformMenu->addAction("Переместить модель");
+    connect(rotateAction, &QAction::triggered, this, &MainWindow::rotateModel);
+    connect(translateAction, &QAction::triggered, this, &MainWindow::translateModel);
 }
 
 MainWindow::~MainWindow() {}
@@ -30,12 +37,10 @@ void MainWindow::openModel()
 
     if (!filePath.isEmpty()) {
         if (modelViewer->loadModel(filePath)) {
-            // Получаем данные о модели через методы ModelViewer
             QVector3D dimensions = modelViewer->getModelDimensions();
             double volume = modelViewer->calculateVolume();
             double area = modelViewer->calculateProjectionArea();
 
-            // Обновляем заголовок окна с информацией о модели
             QString title = QString("3D Model Viewer | Модель: %1 | Размеры: %2x%3x%4 м | Объем: %5 м³ | Площадь проекции: %6 м²")
                             .arg(QFileInfo(filePath).fileName())
                             .arg(dimensions.x(), 0, 'f', 2)
@@ -51,6 +56,7 @@ void MainWindow::openModel()
         QMessageBox::warning(this, "Предупреждение", "Файл не выбран.");
     }
 }
+
 void MainWindow::saveText()
 {
     QString filePath = QFileDialog::getSaveFileName(this, "Сохранить текст", "", "Text Files (*.txt)");
@@ -65,3 +71,59 @@ void MainWindow::saveText()
         }
     }
 }
+void MainWindow::rotateModel()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle("Поворот модели");
+
+    QFormLayout form(&dialog);
+    QLineEdit angleXInput(&dialog);
+    QLineEdit angleYInput(&dialog);
+    QLineEdit angleZInput(&dialog);
+    QPushButton applyButton("Применить", &dialog);
+
+    form.addRow("Угол поворота X (градусы):", &angleXInput);
+    form.addRow("Угол поворота Y (градусы):", &angleYInput);
+    form.addRow("Угол поворота Z (градусы):", &angleZInput);
+    form.addRow(&applyButton);
+
+    connect(&applyButton, &QPushButton::clicked, [&]() {
+        float angleX = angleXInput.text().toFloat();
+        float angleY = angleYInput.text().toFloat();
+        float angleZ = angleZInput.text().toFloat();
+
+        modelViewer->rotateModel(angleX, angleY, angleZ);
+        dialog.close();
+    });
+
+    dialog.exec();
+}
+
+void MainWindow::translateModel()
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle("Перемещение модели");
+
+    QFormLayout form(&dialog);
+    QLineEdit dxInput(&dialog);
+    QLineEdit dyInput(&dialog);
+    QLineEdit dzInput(&dialog);
+    QPushButton applyButton("Применить", &dialog);
+
+    form.addRow("Смещение по X (м):", &dxInput);
+    form.addRow("Смещение по Y (м):", &dyInput);
+    form.addRow("Смещение по Z (м):", &dzInput);
+    form.addRow(&applyButton);
+
+    connect(&applyButton, &QPushButton::clicked, [&]() {
+        float dx = dxInput.text().toFloat();
+        float dy = dyInput.text().toFloat();
+        float dz = dzInput.text().toFloat();
+
+        modelViewer->translateModel(dx, dy, dz);
+        dialog.close();
+    });
+
+    dialog.exec();
+}
+
