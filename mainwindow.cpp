@@ -37,18 +37,7 @@ void MainWindow::openModel()
 
     if (!filePath.isEmpty()) {
         if (modelViewer->loadModel(filePath)) {
-            QVector3D dimensions = modelViewer->getModelDimensions();
-            double volume = modelViewer->calculateVolume();
-            double area = modelViewer->calculateProjectionArea();
-
-            QString title = QString("3D Model Viewer | Модель: %1 | Размеры: %2x%3x%4 м | Объем: %5 м³ | Площадь проекции: %6 м²")
-                            .arg(QFileInfo(filePath).fileName())
-                            .arg(dimensions.x(), 0, 'f', 2)
-                            .arg(dimensions.y(), 0, 'f', 2)
-                            .arg(dimensions.z(), 0, 'f', 2)
-                            .arg(volume, 0, 'f', 2)
-                            .arg(area, 0, 'f', 2);
-            setWindowTitle(title);
+            updateWindowTitle();  // Обновляем заголовок окна после загрузки модели
         } else {
             QMessageBox::warning(this, "Ошибка", "Не удалось загрузить модель.");
         }
@@ -56,7 +45,6 @@ void MainWindow::openModel()
         QMessageBox::warning(this, "Предупреждение", "Файл не выбран.");
     }
 }
-
 void MainWindow::saveText()
 {
     QString filePath = QFileDialog::getSaveFileName(this, "Сохранить текст", "", "Text Files (*.txt)");
@@ -71,6 +59,7 @@ void MainWindow::saveText()
         }
     }
 }
+
 void MainWindow::rotateModel()
 {
     QDialog dialog(this);
@@ -93,6 +82,7 @@ void MainWindow::rotateModel()
         float angleZ = angleZInput.text().toFloat();
 
         modelViewer->rotateModel(angleX, angleY, angleZ);
+        updateWindowTitle();  // Обновляем заголовок окна после поворота
         dialog.close();
     });
 
@@ -121,9 +111,25 @@ void MainWindow::translateModel()
         float dz = dzInput.text().toFloat();
 
         modelViewer->translateModel(dx, dy, dz);
+        updateWindowTitle();  // Обновляем заголовок окна после перемещения
         dialog.close();
     });
 
     dialog.exec();
+}
+void MainWindow::updateWindowTitle()
+{
+    QVector3D dimensions = modelViewer->getModelDimensions();
+    double volume = modelViewer->calculateVolume();
+    double area = modelViewer->calculateProjectionArea();
+
+    QString title = QString("3D Model Viewer | Модель: %1 | Размеры: %2x%3x%4 м | Объем: %5 м³ | Площадь проекции: %6 м²")
+                    .arg("Модель") // Здесь можно добавить имя модели, если нужно
+                    .arg(dimensions.x(), 0, 'f', 2)
+                    .arg(dimensions.y(), 0, 'f', 2)
+                    .arg(dimensions.z(), 0, 'f', 2)
+                    .arg(volume, 0, 'f', 2)
+                    .arg(area, 0, 'f', 2);
+    setWindowTitle(title);
 }
 

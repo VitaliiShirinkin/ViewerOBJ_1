@@ -17,6 +17,7 @@ private slots:
     void saveText();
     void rotateModel(); // Слот для поворота модели
     void translateModel(); // Слот для перемещения модели
+    void updateWindowTitle(); // Новый слот для обновления заголовка окна
 
 private:
     ModelViewer *modelViewer;

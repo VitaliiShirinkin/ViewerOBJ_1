@@ -70,61 +70,60 @@ QVector3D Model::getModelDimensions() const {
     float minY = vertices[0].y(), maxY = vertices[0].y();
     float minZ = vertices[0].z(), maxZ = vertices[0].z();
 
-    for (const QVector3D &vertex : vertices) {
-        if (vertex.x() < minX) minX = vertex.x();
-        if (vertex.x() > maxX) maxX = vertex.x();
-        if (vertex.y() < minY) minY = vertex.y();
-        if (vertex.y() > maxY) maxY = vertex.y();
-        if (vertex.z() < minZ) minZ = vertex.z();
-        if (vertex.z() > maxZ) maxZ = vertex.z();
+        for (const QVector3D &vertex : vertices) {
+            if (vertex.x() < minX) minX = vertex.x();
+            if (vertex.x() > maxX) maxX = vertex.x();
+            if (vertex.y() < minY) minY = vertex.y();
+            if (vertex.y() > maxY) maxY = vertex.y();
+            if (vertex.z() < minZ) minZ = vertex.z();
+            if (vertex.z() > maxZ) maxZ = vertex.z();
+        }
+
+        return QVector3D(maxX - minX, maxY - minY, maxZ - minZ);
     }
 
-    return QVector3D(maxX - minX, maxY - minY, maxZ - minZ);
-}
-
-const QVector<QVector3D>& Model::getVertices() const {
-    return vertices;
-}
-
-const QVector<QVector<int>>& Model::getFaces() const {
-    return faces;
-}
-
-void Model::rotateX(float angle) {
-    float rad = qDegreesToRadians(angle);
-    for (QVector3D &vertex : vertices) {
-        float y = vertex.y() * cos(rad) - vertex.z() * sin(rad);
-        float z = vertex.y() * sin(rad) + vertex.z() * cos(rad);
-        vertex.setY(y);
-        vertex.setZ(z);
+    const QVector<QVector3D>& Model::getVertices() const {
+        return vertices;
     }
-}
 
-void Model::rotateY(float angle) {
-    float rad = qDegreesToRadians(angle);
-    for (QVector3D &vertex : vertices) {
-        float x = vertex.x() * cos(rad) + vertex.z() * sin(rad);
-        float z = -vertex.x() * sin(rad) + vertex.z() * cos(rad);
-        vertex.setX(x);
-        vertex.setZ(z);
+    const QVector<QVector<int>>& Model::getFaces() const {
+        return faces;
     }
-}
 
-void Model::rotateZ(float angle) {
-    float rad = qDegreesToRadians(angle);
-    for (QVector3D &vertex : vertices) {
-        float x = vertex.x() * cos(rad) - vertex.y() * sin(rad);
-        float y = vertex.x() * sin(rad) + vertex.y() * cos(rad);
-        vertex.setX(x);
-        vertex.setY(y);
+    void Model::rotateX(float angle) {
+        float rad = qDegreesToRadians(angle);
+        for (QVector3D &vertex : vertices) {
+            float y = vertex.y() * cos(rad) - vertex.z() * sin(rad);
+            float z = vertex.y() * sin(rad) + vertex.z() * cos(rad);
+            vertex.setY(y);
+            vertex.setZ(z);
+        }
     }
-}
 
-void Model::translate(float dx, float dy, float dz) {
-    for (QVector3D &vertex : vertices) {
-        vertex.setX(vertex.x() + dx);
-        vertex.setY(vertex.y() + dy);
-        vertex.setZ(vertex.z() + dz);
+    void Model::rotateY(float angle) {
+        float rad = qDegreesToRadians(angle);
+        for (QVector3D &vertex : vertices) {
+            float x = vertex.x() * cos(rad) + vertex.z() * sin(rad);
+            float z = -vertex.x() * sin(rad) + vertex.z() * cos(rad);
+            vertex.setX(x);
+            vertex.setZ(z);
+        }
     }
-}
 
+    void Model::rotateZ(float angle) {
+        float rad = qDegreesToRadians(angle);
+        for (QVector3D &vertex : vertices) {
+            float x = vertex.x() * cos(rad) - vertex.y() * sin(rad);
+            float y = vertex.x() * sin(rad) + vertex.y() * cos(rad);
+            vertex.setX(x);
+            vertex.setY(y);
+        }
+    }
+
+    void Model::translate(float dx, float dy, float dz) {
+        for (QVector3D &vertex : vertices) {
+            vertex.setX(vertex.x() + dx);
+            vertex.setY(vertex.y() + dy);
+            vertex.setZ(vertex.z() + dz);
+        }
+    }

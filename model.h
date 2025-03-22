@@ -24,7 +24,7 @@ public:
     void translate(float dx, float dy, float dz);
 
 private:
-    QVector<QVector3D> vertices;
+    QVector<QVector3D> vertices; // Объявление переменной vertices
     QVector<QVector<int>> faces;
 };
 
