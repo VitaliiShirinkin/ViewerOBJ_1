@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 # Название проекта
-project(My3DModelViewer)
+project(ViewerObj)
 
 # Установка стандарта C++17
 set(CMAKE_CXX_STANDARD 17)
@@ -33,10 +33,10 @@ set(HEADERS
 )
 
 # Создание исполняемого файла с указанием исходных и заголовочных файлов
-add_executable(My3DModelViewer
+add_executable(ViewerObj
     ${SOURCES}
     ${HEADERS}
 )
 
 # Подключение библиотек Qt6 к проекту
-target_link_libraries(My3DModelViewer PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
+target_link_libraries(ViewerObj PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)

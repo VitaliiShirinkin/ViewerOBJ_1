@@ -1,10 +1,17 @@
-#include <QApplication>  // Основной класс приложения Qt
-#include "mainwindow.h"  // Заголовочный файл главного окна
+// Подключаем основной класс приложения Qt
+#include <QApplication>
+// Подключаем заголовочный файл главного окна
+#include "mainwindow.h"
 
+// Точка входа в программу
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);  // Создание объекта приложения
-    MainWindow window;             // Создание объекта главного окна
-    window.show();                 // Отображение главного окна
-    return app.exec();             // Запуск основного цикла приложения
+    // Создаем объект приложения
+    QApplication app(argc, argv);
+    // Создаем объект главного окна
+    MainWindow window;
+    // Отображаем главное окно
+    window.show();
+    // Запускаем основной цикл приложения
+    return app.exec();
 }
