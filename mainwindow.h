@@ -1,39 +1,30 @@
-// Защита от повторного включения заголовочного файла
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-// Подключаем базовый класс для главного окна
 #include <QMainWindow>
-// Подключаем заголовочный файл для работы с моделью и отображением
 #include "modelviewer.h"
+#include <QTextEdit> // Добавляем для текстового поля
 
-// Класс главного окна
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT  // Макрос для поддержки сигналов и слотов
+    Q_OBJECT
 
 public:
-    // Конструктор с параметром родительского виджета
     MainWindow(QWidget *parent = nullptr);
-    // Деструктор
     ~MainWindow();
 
 private slots:
-    // Слот для открытия модели
     void openModel();
-    // Слот для сохранения текста
     void saveText();
-    // Слот для поворота модели
     void rotateModel();
-    // Слот для перемещения модели
     void translateModel();
-    // Слот для обновления заголовка окна
     void updateWindowTitle();
+    void updateVertexInfo(int index, const QVector3D &vertex); // Новый слот для обновления информации о вершине
 
 private:
-    // Указатель на объект для работы с моделью и отображением
     ModelViewer *modelViewer;
+    QTextEdit *infoPanel; // Добавляем текстовое поле для информации
+    QString modelFileName; // Переменная для хранения имени файла модели
 };
 
-// Завершение защиты от повторного включения
 #endif // MAINWINDOW_H

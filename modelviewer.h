@@ -20,6 +20,8 @@ public:
     void rotateModel(float angleX, float angleY, float angleZ);
     void translateModel(float dx, float dy, float dz);
 
+    Viewer* getViewer() const; // Новый метод для получения указателя на Viewer
+
 private:
     Model *model;
     Viewer *viewer;

@@ -3,13 +3,16 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-// Конструктор класса ModelViewer
 ModelViewer::ModelViewer(QWidget *parent)
     : QWidget(parent), model(new Model()), viewer(new Viewer(this))
 {
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->addWidget(viewer);
     setLayout(layout);
+}
+
+Viewer* ModelViewer::getViewer() const {
+    return viewer; // Возвращаем указатель на Viewer
 }
 
 // Метод для загрузки модели из файла
